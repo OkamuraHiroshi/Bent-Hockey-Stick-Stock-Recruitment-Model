@@ -1,2 +1,1 @@
-Hello
-"# Bent-Hockey-Stick-Stock-Recruitment-Model" 
+# Bent-Hockey-Stick-Stock-Recruitment-Model 
