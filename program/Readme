@@ -31,3 +31,5 @@ source("leslie.r")
 source("sim.r")
 
 res2 <- leslie(dat, model=2, do_compile=FALSE, pre_process=FALSE)
+msy_est(res2)
+
