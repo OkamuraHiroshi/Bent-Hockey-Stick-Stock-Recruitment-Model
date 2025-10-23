@@ -1,25 +1,32 @@
-# Example Code
+## Example Code
 
+## Load required libraries
 library(TMB)
 library(statmod)
 library(mvtnorm)
 library(tidyverse)
 
+## Compile TMB model
 compile("leslie.cpp")
 dyn.load(dynlib("leslie"))
 
-## data
-
+## Load and preprocess data
 dat <- read.csv("squid.csv")
+# Convert biomass-based catch and CPUE to abundance-based values
 dat <- dat %>% mutate(Cat=Catch/Mass, CR=CPUE/Mass)
+# Total catch per year
 TC <- dat %>% group_by(Year) %>% summarize(TC=sum(Cat))
+# Estimate q and N0 from linear regression: CR ~ cumulative catch
 res <- lapply(1987:2000, function(i) lm(CR~cumsum(Cat),data=subset(dat, Year==i)))
-lm_res <- sapply(1:length(res), function(i) c(-res[[i]]$coef[2], -res[[i]]$coef[1]/res[[i]]$coef[2]))
-lm_res <- rbind(lm_res, TC$TC)
-lm_res <- as.data.frame(t(lm_res))
-names(lm_res) <- c("q","N0","Catch")
+# Extract parameters (negatives account for depletion slope)
+lm_res <- data.frame(
+  q = sapply(res, \(m) -coef(m)[2]),
+  N0 = sapply(res, \(m) -coef(m)[1]/coef(m)[2]),
+  Catch = TC$TC
+)
 rownames(lm_res) <- 1987:2000
 
+## Run the Leslie state-space model with bent hockey-stick recruitment (model=2)
 source("leslie.r")
 source("sim.r")
 
