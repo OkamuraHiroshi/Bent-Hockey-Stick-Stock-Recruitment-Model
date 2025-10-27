@@ -4,9 +4,9 @@ This page provides an R program designed for the state-space Leslie model incorp
 
 Note (Windows users): The TMB package requires compilation of C++ code. On Windows, you need to install Rtools before using this program.
 
-Download: CRAN Rtools page
+- Download: [CRAN Rtools page](https://cran.r-project.org/bin/windows/Rtools/rtools40.html)
 
 After installation, restart R and ensure that Rtools is on your system PATH.
 Without Rtools, the installation or execution of TMB models may fail.
 
-Example code is available in the program folder.
+- Example code is available in the program folder.
