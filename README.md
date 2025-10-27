@@ -9,4 +9,4 @@ Note (Windows users): The TMB package requires compilation of C++ code. On Windo
 After installation, restart R and ensure that Rtools is on your system PATH.
 Without Rtools, the installation or execution of TMB models may fail.
 
-- Example code is available in the program folder.
+- Example code is available in the [program folder](https://github.com/OkamuraHiroshi/Bent-Hockey-Stick-Stock-Recruitment-Model/blob/main/program/Readme).
