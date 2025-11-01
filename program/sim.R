@@ -1,5 +1,6 @@
 ## Simulation
 
+
 ##
 
 logit <- function(x) log(x/(1-x))
@@ -30,6 +31,7 @@ Pop_simulator <- function(parms=NULL, res, model=1, Sim=1000, seed0=1){
   x_int <- res$x_int
   n_g <- res$n_g
   GL <- res$GL
+  M <- res$M
 
   if (is.null(parms)){
     mu_p <- sdrep$par.fixed
@@ -52,6 +54,7 @@ Pop_simulator <- function(parms=NULL, res, model=1, Sim=1000, seed0=1){
   YEAR <- dat$YEAR+1
   START <- dat$START
   END <- dat$END
+  WEEK <- dat$WEEK
   U <- summary(sdrep)[rownames(summary(sdrep))=="U",]
   logit_U <- cbind(logit(U[,1]), (1/(U[,1]*(1-U[,1])))*U[,2])
   set.seed(seed0)
@@ -60,13 +63,13 @@ Pop_simulator <- function(parms=NULL, res, model=1, Sim=1000, seed0=1){
       u[i,] <- ilogit(rnorm(Sim, logit_U[i,1], logit_U[i,2]))
       if (START[i]==1) {
         if (i==1) n0[YEAR[i],] <- pars$tilde_n0 else n0[YEAR[i],] <- pop_update(base_parms,exp(n_last[YEAR[i]-1,]),eps[YEAR[i]-1,],GL,g=g,model=model)
-        n[i,] <- n0[YEAR[i],]
+        n[i,] <- n0[YEAR[i],]-M*7*WEEK[i]
       }
-      if (START[i]==0) n[i,] <- n[i-1,]+log(1-u[i-1,])
-      if (END[i]==1) n_last[YEAR[i],] <- n[i,]+log(1-u[i,])
+      if (START[i]==0) n[i,] <- n[i-1,]-M*7*(WEEK[i]-WEEK[i-1])+log(1-u[i-1,])
+      if (END[i]==1) n_last[YEAR[i],] <- n[i,]-M*7*(26-WEEK[i])+log(1-u[i,])
   }
   n0_new <- pop_update(base_parms,exp(n_last[nY,]),eps[nY,],GL,g=g,model=model)
-  list(parms=pars, base_parms=base_parms, n0=n0, n_last=n_last, n0_new=n0_new, n=n, u=u)
+  list(parms=pars, base_parms=base_parms, M=M, WEEK=WEEK, n0=n0, n_last=n_last, n0_new=n0_new, n=n, u=u)
 }
 
 #
@@ -77,6 +80,8 @@ Simulated_data <- function(res, Sim=1000, p=0.1, seed0=1){
   YEAR <- dat$YEAR+1
   START <- dat$START
   END <- dat$END
+  WEEK <- dat$WEEK
+  M <- res$M
   model <- res$model
   sdrep <- res$sdrep
   
@@ -113,17 +118,15 @@ Simulated_data <- function(res, Sim=1000, p=0.1, seed0=1){
   log_cpue <- matrix(NA, nrow=nt, ncol=m)
   log_q <- matrix(NA, nrow=nY, ncol=m)
   log_q[1,] <- rnorm(m, log_tilde_q, eta)
-  WEEK <- numeric(nt)
   
   for (i in 1:nt){
     if (i>1 & START[i]==1) log_q[YEAR[i],] <- log_q[YEAR[i]-1,]+eta*z2[YEAR[i]-1,]
-    if (START[i]==1) WEEK[i] <- 0 else WEEK[i] <- WEEK[i-1]+1
     log_cpue[i,] <- log_q[YEAR[i],]+n[i,]+tau*z[i,]
   }
   
   tcat <- sapply(1:m, function(i) tapply(catch[,i], YEAR, sum))
   
-  list(m=m, parms=parms, base_parms=base_parms, model=model, YEAR=YEAR-1, WEEK=WEEK, START=START, END=END, n0=n0, n_last=n_last, n0_new=n0_new, n=n, u=u, cpue=exp(log_cpue), catch=catch, tcat=tcat, q=exp(log_q))
+  list(m=m, parms=parms, base_parms=base_parms, model=model, M=M, YEAR=YEAR-1, WEEK=WEEK, START=START, END=END, n0=n0, n_last=n_last, n0_new=n0_new, n=n, u=u, cpue=exp(log_cpue), catch=catch, tcat=tcat, q=exp(log_q))
 }
 
 ##
@@ -132,7 +135,6 @@ make_dat <- function(x,i) data.frame(Year=x$YEAR, Week=x$WEEK,Cat=x$catch[,i], C
 make_par <- function(x,i){
   list(log_a=x$parms[i,"log_a"],
        log_b=x$parms[i,"log_b"],
-    #   log_k=log(0.1),
        tilde_n0=x$parms[i,"tilde_n0"],
        log_tilde_q=x$parms[i,"log_tilde_q"],
        log_sigma=x$parms[i,"log_sigma"],
@@ -142,13 +144,14 @@ make_par <- function(x,i){
        n0=x$n0[,i]
       )
 }
-sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,a_range=NULL,b_range=NULL,mod="MR"){
+sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,a_range=NULL,b_range=NULL,mod="BHS",start=1){
   Res_sim <- list()
   m <- Sim_dat$m
   last_n <- last(Sim_dat$n)
-  last_n <- ifelse(is.na(last_n),-Inf,last_n)  
+  last_n <- ifelse(is.na(last_n),-Inf,last_n)
+  a_init0 <- a_init
   
-  if (model==2) X = rbind(c(0,2),c(0,3),c(0,4),c(0,5),c(0,10),c(0,20),c(0,40),c(0,1),c(0,0.5),c(0,0.4),c(0,0.3),c(0,0.2))
+  if (model==2) X = rbind(c(0,5),c(0,6),c(0,7),c(0,8),c(0,9),c(0,10),c(0,20),c(0,4),c(0,3),c(0,2),c(0,1),c(0,0.5),c(0,0.1))
   if (model==1) X = rbind(c(0,0.01),c(0,0.1),c(0,0.5))
   if (model==0) X = rbind(c(0,0.01))
   if (model>=3) X = rbind(c(0,1))
@@ -157,32 +160,42 @@ sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,a_range=NULL,b_range
   
   temp_res <- list(conv_diag=rep(TRUE,5))
   
-  for (i in 1:m){
+  for (i in start:m){
     print(i)
     for (kk in 1:nr){
-    if (mod=="MR"){
-      if (is.null(a_init)) {if (i==97) {a_init=1.5; b_init=4} else {a_init <- b_init <- NULL}}
-      if (model==1) if (i==70) a_init=1.5 else a_init=NULL
+    if (mod=="HS"){
+      if (model==0) if (i==7 | i==21 | i==23 | i==31 | i==67 | i==68) a_init=4 else {if (i==15 | i==48 | i==85 | i==95) a_init=2 else {if (i==13 | i==29 | i==57 | i==93 | i==97 | i==98) a_init=6 else {if (i==59) a_init=1 else a_init=a_init0}}}
+      if (model==1) if (i==89) a_init=4 else a_init=a_init0
+      if (model==2) {
+        if (i==32 | i==45 | i==52 | i==64 | i==88 | i==89) a_init=2 else {if (i==65 | i==86) a_init=4 else a_init=a_init0}
+      }
+      if (model==3) if (i==6 | i==7 | i==23 | i==30 | i==48 | i==62 | i==77) a_init=2 else {if (i==32 | i==76) a_init=4 else {if (i==45 | i==53 | i==54) a_init=6 else {if (i==51) a_init=8 else a_init=a_init0}}}
+      if (model==4) if (i==1 | i==5 | i==6 | i==10 | i==11 | i==14 | i==15 | i==17 | i==30 | i==33 | i==42 | i==77 | i==80 | i==89) a_init=4 else {if (i==25 | i==63 | i==95) a_init=6 else {if (i==38 | i==55 | i==75 | i==92) a_init=8 else a_init=a_init0}}
+    }
+    if (mod=="MR"){ }
+    if (mod=="BHS"){
+      if (model==0) if (i %in% c(3,10,13,26,42,53,57,62,77,78,90,92,97,100)) a_init=2 else {if (i %in% c(11,72)) a_init=4 else {if (i %in% c(32,35,51,58,70,76,79,94,95)) a_init=6 else {if (i %in% c(6,16,19,21,39)) a_init=8 else {if (i==15) a_init=1 else a_init=a_init0}}}}
+      if (model==1) if (i==41) a_init=1 else {if (i==51 | i==68 | i==84 | i==90) a_init=4 else a_init=a_init0}
+      if (model==2) if (i==16 | i==45 | i==72 | i==76 | i==94) a_init=2 else {if (i==81 | i==92) a_init=4 else a_init=a_init0}
+      if (model==3) if (i %in% c(1,52,53,71,72,84,92,98)) a_init=2 else {if (i==50) a_init=4 else {if (i==36) a_init=6 else a_init=a_init0}}
+    #  if (model==3) if (i %in% c(12,34,61,89)) a_init=2 else a_init=1.2
+      if (model==4) if (i %in% c(7,31,33,43,44,77)) a_init=4 else {if (i %in% c(11,18,22)) a_init=6 else {if (i %in% c(39,41,58)) a_init=8 else {if (i==1) a_init=10 else a_init=a_init0}}}
     }
     if (mod=="BH"){
-      if (i==21) a_init=1 else {if (i==48) a_init=3 else {if (i==81) a_init=1.2 else a_init=1.5}}
-      if (model==1) if (i==58) a_init=1.2 else a_init=1.5
-    }
-    if (mod=="BHS"){
-      if (model==1) if (i==70) a_init=0.5 else a_init=1.2
-      if (model==2) if (i==65) a_init=NULL else a_init=1.2
-      if (model==3) if (i %in% c(12,34,61,89)) a_init=2 else a_init=1.2
-      if (model==4) if (i %in% c(17,39,69,83)) a_init=2 else {if (i==77) a_init=3 else a_init=1.2}
+      if (model==0) if (i %in% c(4,23,34,41,47,51,67,68,69,79,86)) a_init=2 else {if (i %in% c(43,72)) a_init=4 else {if (i %in% c(15,32)) a_init=6 else {if (i %in% c(28,44,63,76,81,90)) a_init=8 else {if (i==100) a_init=1 else a_init=a_init0}}}}
+      if (model==1) if (i %in% c(2,36,76)) a_init=4 else {if (i==90) a_init=2 else a_init=a_init0}
+      if (model==2) if (i %in% c(14,33,40,43,52,54,58)) a_init=2 else {if (i %in% c(27)) a_init=1 else {if (i %in% c(29,98,99)) a_init=4 else {if (i %in% c(44)) a_init=6 else a_init=a_init0}}}
+      if (model==4) if (i %in% c(3,4,7,9,22,43,57,65,75,86)) a_init=4 else {if (i==60) a_init=6 else a_init=a_init0}
     }
     if (mod=="RI"){
-      if (model==1) a_init=1.5
-      if (model==2) if (i==95) a_init=1.2 else a_init=1.5
-      if (model==3) if (i %in% c(49,87)) a_init=3 else a_init=1.5
-      if (model==4) if (i %in% c(2,13)) a_init=2 else {if (i==62) a_init=3 else {if (i==11) a_init=1 else a_init=1.5}}
+      if (model==0) if (i %in% c(22,55,83,84)) a_init=4 else {if (i %in% c(17,25,41,48)) a_init=6 else {if (i %in% c(33,66,80,85)) a_init=8 else {if (i %in% c(75)) a_init=10 else {if (i %in% c(52,76,77,82)) a_init=12 else {if (i %in% c(26)) a_init=14 else a_init=a_init0}}}}}
+      if (model==1) if (i %in% c(41,47,73,76,85)) a_init=8 else {a_init=a_init0}
+      if (model==2) if (i==25) a_init=4 else {if (i==77) a_init=2 else a_init=a_init0}
+      if (model==3) if (i %in% c(9,55,75)) a_init=2 else a_init=a_init0
+      if (model==4) if (i %in% c(100)) a_init=8 else {a_init=a_init0}
     }
     if (exp(last_n[i]) > 0){
       dat_sim <- make_dat(Sim_dat,i)
- #     print(dat_sim)
       par_sim <- make_par(Sim_dat,i)
       if (kk==1 | (kk > 1 & temp_res$conv_diag[5]!=TRUE)) temp_res <- leslie(dat_sim, par_sim, model=model, do_compile=FALSE, pre_process=FALSE, x_int=X[kk,], g0=X[kk,2],a_range=a_range,b_range=b_range,a_init=a_init,b_init=b_init)
     } else {
