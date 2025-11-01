@@ -8,11 +8,12 @@ leslie <- function(
   model=2,
   do_compile=TRUE,
   tmb_file="leslie",
+  M=0.0133,     # Roa-Ureta & Arkhipkin (2007)
   g0=0.01,
-  x_int=c(0,2),
+  x_int=c(0,5),
   n_g=10,
-  a_range=c(1,5),
-  b_range=c(2.5,7.5),
+  a_range=c(1,10),
+  b_range=c(1,10),
   a_init=NULL,
   b_init=NULL,
   max_P=0.5,
@@ -62,16 +63,16 @@ leslie <- function(
   dat1 <- dat %>% mutate(Y=Year-min(Year)) %>% group_by(Year) %>% mutate(W=Week-min(Week), START=(W==0), END=(W==max(W)))
   dat1c <- dat %>% group_by(Year) %>% summarize(CC=sum(Cat))
   nY <- max(dat1$Y)+1
-  dat_bhs <- list(CPUE=dat1$CR, CAT=dat1$Cat, YEAR=dat1$Y, START=as.numeric(dat1$START), END=as.numeric(dat1$END), Y=nY, x_lo=x_int[1], x_up=x_int[2], nodes=nodes, wt=wt, g=g0, model=model)
+  dat_bhs <- list(CPUE=dat1$CR, CAT=dat1$Cat, WEEK=dat1$Week, YEAR=dat1$Y, START=as.numeric(dat1$START), END=as.numeric(dat1$END), Y=nY, M=M, x_lo=x_int[1], x_up=x_int[2], nodes=nodes, wt=wt, g=g0, model=model)
   if (is.null(parms)){
     par_bhs <- list(
-      log_a=log(2),
-      log_b=mean(log(lm_res$N0)),
+      log_a=2,
+      log_b=2,
       tilde_n0=max(mean(log(lm_res$N0)), max(log(dat1c$CC*1.5))),
       log_tilde_q=mean(log(lm_res$q)),
-      log_sigma=log(0.2),
-      log_tau=log(0.2),
-      log_eta=log(0.2),
+      log_sigma=log(0.3),
+      log_tau=log(0.3),
+      log_eta=log(0.3),
       log_q=log(lm_res$q),
       n0=pmax(log(lm_res$N0), log(dat1c$CC*1.5))
     )
@@ -166,7 +167,7 @@ leslie <- function(
     p1 <- ggplot(ts_out, aes(x=S,y=R))+geom_point()+labs(x="S", y="R")+theme_bw()+geom_line(data=pred_out, aes(x=ES,y=ER),color="blue")
   } else p1 <- NULL
   
-  list(model=model, model_name=model_name[model+1], x_int=x_int, n_g=n_g, GL=GL, no_est=no_est, g=g0, phase_b=phase_b, conv_diag=conv_diag, p=p1, obj=obj, mod=mod_bhs, pars=pars, dat=dat_bhs, sdrep=sdrep, ts_out=ts_out)
+  list(model=model, model_name=model_name[model+1], M=M, x_int=x_int, n_g=n_g, GL=GL, no_est=no_est, g=g0, phase_b=phase_b, conv_diag=conv_diag, p=p1, obj=obj, mod=mod_bhs, pars=pars, dat=dat_bhs, sdrep=sdrep, ts_out=ts_out)
 }
 
 ## Prediction
@@ -192,9 +193,11 @@ SR_plot <- function(res, msy_res=NULL){
  ts_out <- res$ts_out
  model <- res$model
  pars <- res$par
+ GL <- res$GL
+ g <- res$g
  
  X <- seq(0,round(max(ts_out$S)*1.1))
- pred_out <- data.frame(ES = X, ER = pred_R(X, pars, model=model))
+ pred_out <- data.frame(ES = X, ER = pred_R(X, pars, GL, g=g, model=model))
 
  p1 <- ggplot(ts_out, aes(x=S,y=R))+geom_point()+labs(x="S", y="R")+theme_bw()+geom_line(data=pred_out, aes(x=ES,y=ER),color="blue")
  
@@ -203,13 +206,13 @@ SR_plot <- function(res, msy_res=NULL){
 
 ## MSY estimation
 
-n_est <- function(n, p, GL, g, U=0.5, n_g=100, stochastic=TRUE, model=2){
+n_est <- function(n, p, M, GL, g, U=0.5, n_g=50, stochastic=TRUE, model=2){
    require(statmod)
    g_he <- gauss.quad(n_g,kind="hermite")
 
    if (stochastic) sigma <- exp(p$log_sigma) else sigma <- rep(0, n_g)
    
-   S <- function(z) exp(n+log(1-U)+z)
+   S <- function(z) exp(n-M*7*26+log(1-U)+z)
    integrand <- function(z) pred_R(S(z), p, GL, g, model=model)
    n_pred <- sum(g_he$weights*integrand(sqrt(2)*sigma*g_he$nodes))/sqrt(pi)
    
@@ -221,16 +224,12 @@ n_finder <- function(x, res, U=0.5, st=TRUE){
   p <- res$par
   GL <- res$GL
   g <- res$g
+  M <- res$M
  
- (x - n_est(x, p, GL, g, U=U, stochastic=st, model=model))^2
+ (x - n_est(x, p, M, GL, g, U=U, stochastic=st, model=model))^2
 }
 
-sy <- function(res, U=0.5, st=TRUE, n_range=c(5,10)) {
-  model <- res$model
-  p <- res$par
-  GL <- res$GL
-  g <- res$g
-  
+sy <- function(res, U=0.5, st=TRUE, n_range=c(2,12)) {
   n_eq <- optimize(n_finder, n_range, res=res, U=U, st=st)
   res <- log(U)+n_eq$minimum
   attr(res, "obj") <- n_eq$objective
@@ -240,17 +239,16 @@ sy <- function(res, U=0.5, st=TRUE, n_range=c(5,10)) {
 msy_est <- function(
   res,
   ST=TRUE,
-  n_range=c(5,10),
+  n_range=c(2,12),
   U_range=c(0.01,0.99)
 ){
   model <- res$model
+  M <- res$M
   p <- res$par
-  GL <- res$GL
-  g <- res$g
   
   U_msy <- optimize(sy, U_range, maximum=TRUE, res=res, st=ST, n_range=n_range)
   n_msy <- optimize(n_finder, n_range, res=res, U=U_msy$maximum, st=ST)
-  S_msy <- exp(n_msy$minimum)*(1-U_msy$maximum)
+  S_msy <- exp(n_msy$minimum)*exp(-M*7*26)*(1-U_msy$maximum)
 
   list(model=model, model_name=res$model_name, p=p, U_msy=U_msy, n_msy=n_msy, S_msy=S_msy, MSY=U_msy$maximum*exp(n_msy$minimum))
 }
@@ -261,6 +259,7 @@ sim_est <- function(res, U=0.5, d=1, Sim=3000, Y=100, seed0=1){
   set.seed(seed0)
   model <- res$model
   p <- res$par
+  M <- res$M
   GL <- res$GL
   g <- res$g
   n0 <- p$log_a+p$log_b
@@ -272,7 +271,7 @@ sim_est <- function(res, U=0.5, d=1, Sim=3000, Y=100, seed0=1){
   z <- matrix(rnorm(Y*Sim), nrow=Y, ncol=Sim)
 
   for (i in 1:(Y-1)){
-    n_vec[i+1,] <- log(pred_R(exp(n_vec[i,]+log(1-U)+sigma*z[i,]),p,GL,g,model))
+    n_vec[i+1,] <- log(pred_R(exp(n_vec[i,]-M*7*26+log(1-U)+sigma*z[i,]),p,GL,g,model))
   }
   
   n_vec <- n_vec+sigma*z
@@ -290,12 +289,13 @@ msy_sim_est <- function(
   U_range=c(0.01,0.99)
 ){
   model <- Sim_dat$model
+  M <- res$M
   GL <- res$GL
   g <- res$g
   
   m <- Sim_dat$m
   
-  res1 <- list(model=model, GL=GL, g=g)
+  res1 <- list(model=model, M=M, GL=GL, g=g)
   
   Res <- list()
   for (i in 1:m){
@@ -306,7 +306,7 @@ msy_sim_est <- function(
   
     U_msy <- optimize(sy, U_range, maximum=TRUE, res=res1, st=ST, n_range=n_range)
     n_msy <- optimize(n_finder, n_range, res=res1, U=U_msy$maximum, st=ST)
-    S_msy <- exp(n_msy$minimum)*(1-U_msy$maximum)
+    S_msy <- exp(n_msy$minimum)*exp(-M*7*26)*(1-U_msy$maximum)
 
     Res[[i]] <- list(model=model, model_name=res$model_name, p=p, U_msy=U_msy, n_msy=n_msy, S_msy=S_msy, MSY=U_msy$maximum*exp(n_msy$minimum))
   }

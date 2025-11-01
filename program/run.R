@@ -1,8 +1,7 @@
-## Simulation_BHS
+## Simulation_bhs
 ##
 
 library(TMB)
-library(statmod)
 library(mvtnorm)
 library(tidyverse)
 
@@ -24,12 +23,18 @@ rownames(lm_res) <- 1987:2000
 source("leslie.r")
 source("sim.r")
 
-#
-# res <- leslie(dat, model=2, a_init=NULL, b_init=NULL)
-# model= 0:Hockey-Stick, 1:Mesnil-Rochet, 2:Bent Hockey-Stick, 3:Beverton-Holt, 4:Ricker
-#
+res0 <- leslie(dat, model=0, do_compile=FALSE, pre_process=FALSE)
 
-res1 <- leslie(dat, model=1, do_compile=FALSE, pre_process=FALSE, g0=0.01, b_init=5)
+Sim_dat0 <- Simulated_data(res0,Sim=1000)
+
+Res_sim02 <- sim2est(Sim_dat0, model=2, mod="HS")
+Res_sim01 <- sim2est(Sim_dat0, model=1, mod="HS")
+Res_sim00 <- sim2est(Sim_dat0, model=0, mod="HS")
+Res_sim03 <- sim2est(Sim_dat0, model=3, mod="HS")
+Res_sim04 <- sim2est(Sim_dat0, model=4, mod="HS")
+
+if (0){
+res1 <- leslie(dat, model=1, do_compile=FALSE, pre_process=FALSE, g0=0.01)
 
 Sim_dat1 <- Simulated_data(res1,Sim=1000)
 
@@ -38,36 +43,37 @@ Res_sim11 <- sim2est(Sim_dat1, model=1, mod="MR")
 Res_sim10 <- sim2est(Sim_dat1, model=0, mod="MR")
 Res_sim13 <- sim2est(Sim_dat1, model=3, mod="MR")
 Res_sim14 <- sim2est(Sim_dat1, model=4, mod="MR")
+}
 
 res2 <- leslie(dat, model=2, do_compile=FALSE, pre_process=FALSE)
 
 Sim_dat2 <- Simulated_data(res2,Sim=1000,seed0=3)
 
-Res_sim21 <- sim2est(Sim_dat2, model=1, a_init=1.2, mod="BHS")
-Res_sim22 <- sim2est(Sim_dat2, model=2, a_init=1.2, mod="BHS")
-Res_sim20 <- sim2est(Sim_dat2, model=0, a_init=1.2, mod="BHS")
-Res_sim23 <- sim2est(Sim_dat2, model=3, a_init=1.2, mod="BHS")
-Res_sim24 <- sim2est(Sim_dat2, model=4, a_init=1.2, mod="BHS")
+Res_sim21 <- sim2est(Sim_dat2, model=1, mod="BHS")
+Res_sim22 <- sim2est(Sim_dat2, model=2, mod="BHS")
+Res_sim20 <- sim2est(Sim_dat2, model=0, mod="BHS")
+Res_sim23 <- sim2est(Sim_dat2, model=3, mod="BHS")
+Res_sim24 <- sim2est(Sim_dat2, model=4, mod="BHS")
 
-res3 <- leslie(dat, model=3, do_compile=FALSE, pre_process=FALSE, g0=0.01, b_init=5)
+res3 <- leslie(dat, model=3, do_compile=FALSE, pre_process=FALSE)
 
-Sim_dat3 <- Simulated_data(res3,Sim=1000)
+Sim_dat3 <- Simulated_data(res3,Sim=1000,seed0=5)
 
-Res_sim31 <- sim2est(Sim_dat3, model=1, a_init=1.5, mod="BH")
-Res_sim30 <- sim2est(Sim_dat3, model=0, a_init=1.5, mod="BH")
-Res_sim32 <- sim2est(Sim_dat3, model=2, a_init=1.5, mod="BH")
-Res_sim33 <- sim2est(Sim_dat3, model=3, a_init=1.5, mod="BH")
-Res_sim34 <- sim2est(Sim_dat3, model=4, a_init=1.5, mod="BH")
+Res_sim31 <- sim2est(Sim_dat3, model=1, mod="BH")
+Res_sim30 <- sim2est(Sim_dat3, model=0, mod="BH")
+Res_sim32 <- sim2est(Sim_dat3, model=2, mod="BH")
+Res_sim33 <- sim2est(Sim_dat3, model=3, mod="BH")
+Res_sim34 <- sim2est(Sim_dat3, model=4, mod="BH")
 
-res4 <- leslie(dat, model=4, do_compile=FALSE, pre_process=FALSE, a_init=1.5)
+res4 <- leslie(dat, model=4, do_compile=FALSE, pre_process=FALSE)
 
-Sim_dat4 <- Simulated_data(res4,Sim=1000,seed0=1)
+Sim_dat4 <- Simulated_data(res4,Sim=1000,seed0=7)
 
-Res_sim41 <- sim2est(Sim_dat4, model=1, a_init=1.5, mod="RI")
-Res_sim42 <- sim2est(Sim_dat4, model=2, a_init=1.5, mod="RI")
-Res_sim40 <- sim2est(Sim_dat4, model=0, a_init=1.5, mod="RI")
-Res_sim43 <- sim2est(Sim_dat4, model=3, a_init=1.5, mod="RI")
-Res_sim44 <- sim2est(Sim_dat4, model=4, a_init=1.5, mod="RI")
+Res_sim41 <- sim2est(Sim_dat4, model=1, mod="RI")
+Res_sim42 <- sim2est(Sim_dat4, model=2, mod="RI")
+Res_sim40 <- sim2est(Sim_dat4, model=0, mod="RI")
+Res_sim43 <- sim2est(Sim_dat4, model=3, mod="RI")
+Res_sim44 <- sim2est(Sim_dat4, model=4, mod="RI")
 
 if (0){
 save(res1, Sim_dat1, Res_sim10, Res_sim11, Res_sim12, Res_sim13, Res_sim14, file="Res_s1.rda")
@@ -76,17 +82,17 @@ save(res3, Sim_dat3, Res_sim30, Res_sim31, Res_sim32, Res_sim33, Res_sim34, file
 save(res4, Sim_dat4, Res_sim40, Res_sim41, Res_sim42, Res_sim43, Res_sim44, file="Res_s4.rda")
 }
 
-p0 <- cowplot::plot_grid(res1$p, res2$p, res3$p, res4$p, labels=c("Mesnil-Rochet","Bent Hockey-Stick","Beverton-Holt","     Ricker"))
+p0 <- cowplot::plot_grid(res0$p, res2$p, res3$p, res4$p, labels=c("   Hockey-Stick","Bent Hockey-Stick","   Beverton-Holt","       Ricker"))
 
 ##
 
-U_range <- seq(0.01,0.98,by=0.01)
+U_range <- seq(0.01,0.99,by=0.01)
 
-Sim1 <- sapply(U_range, function(u) mean(sim_est(res1, U=u)[100,]))
-Ana1 <- sapply(U_range, function(u) exp(sy(res1, U=u)))
-Ana10 <- sapply(U_range, function(u) exp(sy(res1, U=u, st=FALSE)))
+Sim1 <- sapply(U_range, function(u) mean(sim_est(res0, U=u)[100,]))
+Ana1 <- sapply(U_range, function(u) exp(sy(res0, U=u)))
+Ana10 <- sapply(U_range, function(u) exp(sy(res0, U=u, st=FALSE)))
 
-dat1 <- data.frame(Model="Mesnil-Rochet", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim1, Ana1, Ana10))
+dat1 <- data.frame(Model="Hockey-Stick", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim1, Ana1, Ana10))
 
 Sim2 <- sapply(U_range, function(u) mean(sim_est(res2, U=u)[100,]))
 Ana2 <- sapply(U_range, function(u) exp(sy(res2, U=u)))
@@ -109,10 +115,10 @@ dat1 <- rbind(dat1,
   data.frame(Model="Ricker", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim4, Ana4, Ana40))
 )
 
-dat1$Model <- factor(dat1$Model, levels=c("Mesnil-Rochet","Bent Hockey-Stick","Beverton-Holt","Ricker"))
+dat1$Model <- factor(dat1$Model, levels=c("Hockey-Stick","Bent Hockey-Stick","Beverton-Holt","Ricker"))
 dat1$Type <- factor(dat1$Type, levels=c("Stochastic","Deterministic","Simulation"))
 
-pSY <- ggplot()+geom_point(data = subset(dat1, Type == "Deterministic"), aes(x = U, y = SY, color = Type, shape = Type, alpha=Type), size = 2.5) + geom_point(data = subset(dat1, Type %in% c("Stochastic", "Simulation")), aes(x = U, y = SY, color = Type, shape = Type,alpha=Type), size = 2.5) + theme_bw() + facet_wrap(~Model) + scale_alpha_manual(values = c("Stochastic" = 1, "Deterministic" = 1, "Simulation" = 1))+labs(x="Fishing Rate", y="Sustainable Yield")+
+pSY <- ggplot()+geom_point(data = subset(dat1, Type == "Deterministic"), aes(x = U, y = SY, color = Type, shape = Type, alpha=Type), size = 2.5) + geom_point(data = subset(dat1, Type %in% c("Stochastic", "Simulation")), aes(x = U, y = SY, color = Type, shape = Type,alpha=Type), size = 2.5) + theme_bw() + facet_wrap(~Model, scale="free") + scale_alpha_manual(values = c("Stochastic" = 1, "Deterministic" = 1, "Simulation" = 1))+labs(x="Fishing Rate", y="Sustainable Yield")+
 scale_color_manual(values = c("Stochastic" = "#F8766D",
                                 "Deterministic" = "#7CAE00",
                                 "Simulation" = "#00BFC4")) +
@@ -122,18 +128,18 @@ scale_color_manual(values = c("Stochastic" = "#F8766D",
 
 # load(file="Res_s1.rda")
 
-par(mfrow=c(2,2))
+par(mfrow=c(4,2))
 
-true_MSY1 <- msy_sim_est(Sim_dat1, res1)
+true_MSY1 <- msy_sim_est(Sim_dat0, res0)
 
 Res_MSY1 <- NULL
 for (i in 1:100){
    print(i)
-   temp0 <- msy_est(Res_sim10[[i]])
-   temp1 <- msy_est(Res_sim11[[i]])
-   temp2 <- msy_est(Res_sim12[[i]])
-   temp3 <- msy_est(Res_sim13[[i]])
-   temp4 <- msy_est(Res_sim14[[i]])
+   temp0 <- msy_est(Res_sim00[[i]])
+   temp1 <- msy_est(Res_sim01[[i]])
+   temp2 <- msy_est(Res_sim02[[i]])
+   temp3 <- msy_est(Res_sim03[[i]])
+   temp4 <- msy_est(Res_sim04[[i]])
 
    U_msy = c(as.numeric(temp0$U_msy$maximum),as.numeric(temp1$U_msy$maximum)
 ,as.numeric(temp2$U_msy$maximum),as.numeric(temp3$U_msy$maximum),as.numeric(temp4$U_msy$maximum))
@@ -142,9 +148,9 @@ for (i in 1:100){
 ,as.numeric(temp4$n_msy$minimum))
    S_msy = c(temp0$S_msy,temp1$S_msy,temp2$S_msy,temp3$S_msy,temp4$S_msy)
    MSY = c(temp0$MSY,temp1$MSY,temp2$MSY,temp3$S_msy,temp4$S_msy)
-   Conv = c(Res_sim10[[i]]$conv_diag[5], Res_sim11[[i]]$conv_diag[5], Res_sim12[[i]]$conv_diag[5], Res_sim13[[i]]$conv_diag[5], Res_sim14[[i]]$conv_diag[5])
+   Conv = c(Res_sim00[[i]]$conv_diag[5], Res_sim01[[i]]$conv_diag[5], Res_sim02[[i]]$conv_diag[5], Res_sim03[[i]]$conv_diag[5], Res_sim04[[i]]$conv_diag[5])
 
-   Res_MSY1 <- rbind(Res_MSY1, data.frame(TrueModel="MR", Model=c("HS","MR","BHS","BH","RI"),U_msy=U_msy, n_msy=n_msy, S_msy=S_msy, MSY=MSY, Conv=Conv))
+   Res_MSY1 <- rbind(Res_MSY1, data.frame(TrueModel="HS", Model=c("HS","MR","BHS","BH","RI"),U_msy=U_msy, n_msy=n_msy, S_msy=S_msy, MSY=MSY, Conv=Conv))
 }
 
 true_Umsy <- sapply(1:100, function(i) true_MSY1[[i]]$U_msy$maximum)
@@ -154,9 +160,9 @@ true_Smsy <- rep(true_Smsy, each=5)
 
 Res_MSY1 <- Res_MSY1 %>% mutate(BU_msy = (U_msy-true_Umsy)/true_Umsy, BS_msy = (S_msy-true_Smsy)/true_Smsy)
 
-boxplot(BU_msy~Model,data=Res_MSY1,main="True=MR")
+boxplot(BU_msy~Model,data=Res_MSY1,main="True=HS")
 abline(h=0,col="red",lty=2)
-boxplot(BS_msy~Model,data=Res_MSY1,main="True=MR")
+boxplot(BS_msy~Model,data=Res_MSY1,main="True=HS")
 abline(h=0,col="red",lty=2)
 
 true_MSY2 <- msy_sim_est(Sim_dat2, res2)
@@ -264,16 +270,13 @@ abline(h=0,col="red",lty=2)
 boxplot(BS_msy~Model,data=Res_MSY4,ylab=expression(S[msy]),main="TRUE=RI")
 abline(h=0,col="red",lty=2)
 
-par(mfrow=c(4,2))
-
 Res_MSYs <- rbind(Res_MSY1, Res_MSY2, Res_MSY3, Res_MSY4)
 
 Res_MSYs$Model <- factor(Res_MSYs$Model, levels=c("HS","MR","BHS","BH","RI"))
-Res_MSYs$TrueModel <- factor(Res_MSYs$TrueModel, levels=c("MR","BHS","BH","RI"))
+Res_MSYs$TrueModel <- factor(Res_MSYs$TrueModel, levels=c("HS","BHS","BH","RI"))
 
 pU <- ggplot(Res_MSYs,aes(x=Model, y=BU_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(U[MSY]))+facet_wrap(~TrueModel, scales="free")
 pS <- ggplot(Res_MSYs,aes(x=Model, y=BS_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(S[MSY]))+facet_wrap(~TrueModel, scales="free")
 
 pU1 <- ggplot(subset(Res_MSYs, Conv),aes(x=Model, y=BU_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(U[MSY]))+facet_wrap(~TrueModel, scales="free")
 pS1 <- ggplot(subset(Res_MSYs, Conv),aes(x=Model, y=BS_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(S[MSY]))+facet_wrap(~TrueModel, scales="free")
-
