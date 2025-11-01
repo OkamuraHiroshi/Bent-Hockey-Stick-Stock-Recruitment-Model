@@ -9,10 +9,12 @@ Type objective_function<Type>::operator() ()
   // DATA //
   DATA_VECTOR(CPUE);
   DATA_VECTOR(CAT);
+  DATA_VECTOR(WEEK);  
   DATA_IVECTOR(YEAR);
   DATA_IVECTOR(START);
   DATA_IVECTOR(END);
   DATA_INTEGER(Y);
+  DATA_SCALAR(M);
   DATA_SCALAR(x_lo);
   DATA_SCALAR(x_up);
   DATA_VECTOR(nodes);
@@ -64,19 +66,19 @@ Type objective_function<Type>::operator() ()
     if (START(i)==1) {
       if (i==0) nll += -dnorm(log_q(YEAR(i)),log_tilde_q,eta,true); 
       if (i > 0) nll += -dnorm(log_q(YEAR(i)),log_q(YEAR(i)-1),eta,true);
-      n(i) = n0(YEAR(i));
+      n(i) = n0(YEAR(i))-M*Type(7.0)*WEEK(i);
       N(i) = exp(n(i));
-      N_S(YEAR(i)) = N(i);
+      N_S(YEAR(i)) = exp(n0(YEAR(i)));
       U(i) = CAT(i)/N(i);
     }
     if (START(i)==0) {
-      n(i) = n(i-1)+log(Type(1.0)-U(i-1));
+      n(i) = n(i-1)-M*Type(7.0)*(WEEK(i)-WEEK(i-1))+log(Type(1.0)-U(i-1));
       N(i) = exp(n(i));
       U(i) = CAT(i)/N(i);
     }
     U(i) = CppAD::CondExpLe(Type(1.0)-U(i),Type(0.0),Type(0.99),U(i));
     if (END(i)==1){
-      n_last(YEAR(i)) = n(i)+log(Type(1.0)-U(i));
+      n_last(YEAR(i)) = n(i)-M*Type(7.0)*(Type(26.0)-WEEK(i))+log(Type(1.0)-U(i));
       N_E(YEAR(i)) = exp(n_last(YEAR(i)));
     }
 
