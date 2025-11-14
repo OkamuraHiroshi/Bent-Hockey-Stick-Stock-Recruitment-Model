@@ -7,7 +7,7 @@ leslie <- function(
   parms=NULL,
   model=2,
   do_compile=TRUE,
-  tmb_file="leslie",
+  tmb_file="leslie_r3",
   M=0.0133,     # Roa-Ureta & Arkhipkin (2007)
   g0=0.01,
   x_int=c(0,5),
@@ -266,15 +266,14 @@ sim_est <- function(res, U=0.5, d=1, Sim=3000, Y=100, seed0=1){
   sigma <- exp(p$log_sigma)
   
   n_vec <- matrix(NA, nrow=Y, ncol=Sim)
-  n_vec[1,] <- n0
 
   z <- matrix(rnorm(Y*Sim), nrow=Y, ncol=Sim)
 
-  for (i in 1:(Y-1)){
-    n_vec[i+1,] <- log(pred_R(exp(n_vec[i,]-M*7*26+log(1-U)+sigma*z[i,]),p,GL,g,model))
-  }
+  n_vec[1,] <- n0+sigma*z[1,]
   
-  n_vec <- n_vec+sigma*z
+  for (i in 1:(Y-1)){
+    n_vec[i+1,] <- log(pred_R(exp(n_vec[i,]-M*7*26+log(1-U)),p,GL,g,model))+sigma*z[i+1,]
+  }
   
   exp(n_vec+log(U)-d*sigma^2/2)
 }
