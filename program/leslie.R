@@ -210,7 +210,7 @@ n_est <- function(n, p, M, GL, g, U=0.5, n_g=50, stochastic=TRUE, model=2){
    require(statmod)
    g_he <- gauss.quad(n_g,kind="hermite")
 
-   if (stochastic) sigma <- exp(p$log_sigma) else sigma <- rep(0, n_g)
+   if (stochastic) sigma <- exp(p$log_sigma) else sigma <- 0 # rep(0, n_g)
    
    S <- function(z) exp(n-M*7*26+log(1-U)+z)
    integrand <- function(z) pred_R(S(z), p, GL, g, model=model)
@@ -219,27 +219,34 @@ n_est <- function(n, p, M, GL, g, U=0.5, n_g=50, stochastic=TRUE, model=2){
    return(log(n_pred))
 }
 
-n_finder <- function(x, res, U=0.5, st=TRUE){
+n_finder <- function(x, res, U=0.5, st=TRUE, optimizer="optimize"){
   model <- res$model
   p <- res$par
   GL <- res$GL
   g <- res$g
   M <- res$M
- 
- (x - n_est(x, p, M, GL, g, U=U, stochastic=st, model=model))^2
+  
+  if (optimizer=="optimize") obj <- (x - n_est(x, p, M, GL, g, U=U, stochastic=st, model=model))^2
+  if (optimizer=="uniroot") obj <- (x - n_est(x, p, M, GL, g, U=U, stochastic=st, model=model))
+  obj
 }
 
 sy <- function(res, U=0.5, st=TRUE, n_range=c(2,12)) {
-  n_eq <- optimize(n_finder, n_range, res=res, U=U, st=st)
-  res <- log(U)+n_eq$minimum
-  attr(res, "obj") <- n_eq$objective
-  res
+  if (n_finder(-5, res=res, U=U, st=st, optimizer="uniroot") >= 0) n_eq <- list(minimum=-5, objective=NA) else n_eq <- optimize(n_finder, n_range, res=res, U=U, st=st, optimizer="optimize")
+  
+  n_eq_est <- n_eq$minimum
+  n_eq_obj <- n_eq$objective
+  
+  res <- log(U)+n_eq_est
+  attr(res, "n") <- n_eq_est
+  attr(res, "obj") <- n_eq_obj
+  return(res)
 }
 
 msy_est <- function(
   res,
   ST=TRUE,
-  n_range=c(2,12),
+  n_range=c(-5,12),
   U_range=c(0.01,0.99)
 ){
   model <- res$model
