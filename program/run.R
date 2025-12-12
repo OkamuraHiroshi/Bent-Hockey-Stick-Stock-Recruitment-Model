@@ -82,6 +82,13 @@ save(res3, Sim_dat3, Res_sim30, Res_sim31, Res_sim32, Res_sim33, Res_sim34, file
 save(res4, Sim_dat4, Res_sim40, Res_sim41, Res_sim42, Res_sim43, Res_sim44, file="Res_s4.rda")
 }
 
+if (0){
+load(file="Res_s0.rda")
+load(file="Res_s2.rda")
+load(file="Res_s3.rda")
+load(file="Res_s4.rda")
+}
+
 p0 <- cowplot::plot_grid(res0$p, res2$p, res3$p, res4$p, labels=c("   Hockey-Stick","Bent Hockey-Stick","   Beverton-Holt","       Ricker"))
 
 ##
@@ -92,43 +99,51 @@ Sim1 <- sapply(U_range, function(u) mean(sim_est(res0, U=u)[100,]))
 Ana1 <- sapply(U_range, function(u) exp(sy(res0, U=u)))
 Ana10 <- sapply(U_range, function(u) exp(sy(res0, U=u, st=FALSE)))
 
-dat1 <- data.frame(Model="Hockey-Stick", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim1, Ana1, Ana10))
+dat1 <- data.frame(Model="Hockey-Stick", Type=rep(c("Simulation-Based Stochastic","Optimization-Based Stochastic","Optimization-Based Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim1, Ana1, Ana10))
 
 Sim2 <- sapply(U_range, function(u) mean(sim_est(res2, U=u)[100,]))
 Ana2 <- sapply(U_range, function(u) exp(sy(res2, U=u)))
 Ana20 <- sapply(U_range, function(u) exp(sy(res2, U=u, st=FALSE)))
 dat1 <- rbind(dat1, 
-  data.frame(Model="Bent Hockey-Stick", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim2, Ana2, Ana20))
+  data.frame(Model="Bent Hockey-Stick", Type=rep(c("Simulation-Based Stochastic","Optimization-Based Stochastic","Optimization-Based Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim2, Ana2, Ana20))
 )
 
 Sim3 <- sapply(U_range, function(u) mean(sim_est(res3, U=u)[100,]))
 Ana3 <- sapply(U_range, function(u) exp(sy(res3, U=u)))
 Ana30 <- sapply(U_range, function(u) exp(sy(res3, U=u, st=FALSE)))
 dat1 <- rbind(dat1, 
-  data.frame(Model="Beverton-Holt", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim3, Ana3, Ana30))
+  data.frame(Model="Beverton-Holt", Type=rep(c("Simulation-Based Stochastic","Optimization-Based Stochastic","Optimization-Based Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim3, Ana3, Ana30))
 )
 
 Sim4 <- sapply(U_range, function(u) mean(sim_est(res4, U=u)[100,]))
 Ana4 <- sapply(U_range, function(u) exp(sy(res4, U=u)))
 Ana40 <- sapply(U_range, function(u) exp(sy(res4, U=u, st=FALSE)))
 dat1 <- rbind(dat1, 
-  data.frame(Model="Ricker", Type=rep(c("Simulation","Stochastic","Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim4, Ana4, Ana40))
+  data.frame(Model="Ricker", Type=rep(c("Simulation-Based Stochastic","Optimization-Based Stochastic","Optimization-Based Deterministic"),each=length(U_range)),U=rep(U_range, 3), SY=c(Sim4, Ana4, Ana40))
 )
 
 dat1$Model <- factor(dat1$Model, levels=c("Hockey-Stick","Bent Hockey-Stick","Beverton-Holt","Ricker"))
-dat1$Type <- factor(dat1$Type, levels=c("Stochastic","Deterministic","Simulation"))
+dat1$Type <- factor(dat1$Type, levels=c("Optimization-Based Stochastic","Optimization-Based Deterministic","Simulation-Based Stochastic"))
 
-pSY <- ggplot()+geom_point(data = subset(dat1, Type == "Deterministic"), aes(x = U, y = SY, color = Type, shape = Type, alpha=Type), size = 2.5) + geom_point(data = subset(dat1, Type %in% c("Stochastic", "Simulation")), aes(x = U, y = SY, color = Type, shape = Type,alpha=Type), size = 2.5) + theme_bw() + facet_wrap(~Model, scale="free") + scale_alpha_manual(values = c("Stochastic" = 1, "Deterministic" = 1, "Simulation" = 1))+labs(x="Fishing Rate", y="Sustainable Yield")+
-scale_color_manual(values = c("Stochastic" = "#F8766D",
-                                "Deterministic" = "#7CAE00",
-                                "Simulation" = "#00BFC4")) +
-  scale_shape_manual(values = c("Stochastic" = 16,  # 丸
-                                "Deterministic" = 17, # 三角
-                                "Simulation" = 15))   # 四角
+pSY <- ggplot()+geom_point(data = subset(dat1, Type == "Optimization-Based Deterministic"), aes(x = U, y = SY, color = Type, shape = Type, alpha=Type), size = 2.5) + geom_point(data = subset(dat1, Type %in% c("Optimization-Based Stochastic", "Simulation-Based Stochastic")), aes(x = U, y = SY, color = Type, shape = Type,alpha=Type), size = 2.5) + theme_bw() + facet_wrap(~Model, scale="free") + scale_alpha_manual(values = c("Optimization-Based Stochastic" = 1, "Optimization-Based Deterministic" = 1, "Simulation-Based Stochastic" = 1))+labs(x="Fishing Rate", y="Sustainable Yield")+
+scale_color_manual(values = c("Optimization-Based Stochastic" = "#F8766D",
+                                "Optimization-Based Deterministic" = "#7CAE00",
+                                "Simulation-Based Stochastic" = "#00BFC4")) +
+  scale_shape_manual(values = c("Optimization-Based Stochastic" = 16,  # 丸
+                                "Optimization-Based Deterministic" = 17, # 三角
+                                "Simulation-Based Stochastic" = 15))+   # 四角
+theme(strip.text = element_text(size = 16),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12)
+        )
+        
+## 
 
-# load(file="Res_s1.rda")
-
-par(mfrow=c(4,2))
+par(mfrow=c(2,2))
 
 true_MSY1 <- msy_sim_est(Sim_dat0, res0)
 
@@ -270,13 +285,32 @@ abline(h=0,col="red",lty=2)
 boxplot(BS_msy~Model,data=Res_MSY4,ylab=expression(S[msy]),main="TRUE=RI")
 abline(h=0,col="red",lty=2)
 
+par(mfrow=c(4,2))
+
 Res_MSYs <- rbind(Res_MSY1, Res_MSY2, Res_MSY3, Res_MSY4)
 
 Res_MSYs$Model <- factor(Res_MSYs$Model, levels=c("HS","MR","BHS","BH","RI"))
 Res_MSYs$TrueModel <- factor(Res_MSYs$TrueModel, levels=c("HS","BHS","BH","RI"))
 
-pU <- ggplot(Res_MSYs,aes(x=Model, y=BU_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(U[MSY]))+facet_wrap(~TrueModel, scales="free")
-pS <- ggplot(Res_MSYs,aes(x=Model, y=BS_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(S[MSY]))+facet_wrap(~TrueModel, scales="free")
+pU <- ggplot(Res_MSYs,aes(x=Model, y=BU_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression("Relative Bias of " * F[MSY]))+facet_wrap(~TrueModel, scales="free")+   
+theme(strip.text = element_text(size = 16),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12)
+        )
+        
+pS <- ggplot(Res_MSYs,aes(x=Model, y=BS_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression("Relative Bias of " * S[MSY]))+facet_wrap(~TrueModel, scales="free")+   
+theme(strip.text = element_text(size = 16),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12)
+        )
 
-pU1 <- ggplot(subset(Res_MSYs, Conv),aes(x=Model, y=BU_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(U[MSY]))+facet_wrap(~TrueModel, scales="free")
+pU1 <- ggplot(subset(Res_MSYs, Conv),aes(x=Model, y=BU_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression("Relative Bias of " * F[MSY]))+facet_wrap(~TrueModel, scales="free")
 pS1 <- ggplot(subset(Res_MSYs, Conv),aes(x=Model, y=BS_msy))+geom_boxplot(fill="skyblue")+geom_hline(yintercept=0, linetype="dashed", colour="red")+theme_bw()+labs(y=expression(S[MSY]))+facet_wrap(~TrueModel, scales="free")
