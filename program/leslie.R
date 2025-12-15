@@ -172,41 +172,7 @@ leslie <- function(
 
 ## Prediction
 
-pred_R <- function(S,p,GL,g=0.01,model=0) {
-   a <- p$a
-   b <- p$b
-   
-   if (model==0) res <- ifelse(S < b, a*S, a*b) 
-   if (model==1) res <- a*(S+sqrt(b^2+g^2/4)-sqrt((S-b)^2+g^2/4))
-   if (model==2){
-     pred <- function(S) sum(GL$xr_x*GL$wt*a*b*(S/b)^(1-(S/b)^(1/GL$xp_x)))/(2*GL$xr_x)
-     pred <- Vectorize(pred, "S")
-     res <- ifelse(S < b, pred(S), a*b)
-   }
-   if (model==3) res <- a*S/(1+S/b)
-   if (model==4) res <- a*S*exp(-S/b)
-   
-   return(res)
-}
-
-SR_plot <- function(res, msy_res=NULL){
- ts_out <- res$ts_out
- model <- res$model
- pars <- res$par
- GL <- res$GL
- g <- res$g
- 
- X <- seq(0,round(max(ts_out$S)*1.1))
- pred_out <- data.frame(ES = X, ER = pred_R(X, pars, GL, g=g, model=model))
-
- p1 <- ggplot(ts_out, aes(x=S,y=R))+geom_point()+labs(x="S", y="R")+theme_bw()+geom_line(data=pred_out, aes(x=ES,y=ER),color="blue")
- 
- p1
-}
-
-## MSY estimation
-
-n_est <- function(n, p, M, GL, g, U=0.5, n_g=50, stochastic=TRUE, model=2){
+n_est <- function(n, p, M, GL, g, U=0.8, n_g=50, stochastic=TRUE, model=2){
    require(statmod)
    g_he <- gauss.quad(n_g,kind="hermite")
 
@@ -219,7 +185,7 @@ n_est <- function(n, p, M, GL, g, U=0.5, n_g=50, stochastic=TRUE, model=2){
    return(log(n_pred))
 }
 
-n_finder <- function(x, res, U=0.5, st=TRUE, optimizer="optimize"){
+n_finder <- function(x, res, U=0.8, st=TRUE, optimizer="optimize"){
   model <- res$model
   p <- res$par
   GL <- res$GL
@@ -231,8 +197,8 @@ n_finder <- function(x, res, U=0.5, st=TRUE, optimizer="optimize"){
   obj
 }
 
-sy <- function(res, U=0.5, st=TRUE, n_range=c(2,12)) {
-  if (n_finder(-5, res=res, U=U, st=st, optimizer="uniroot") >= 0) n_eq <- list(minimum=-5, objective=NA) else n_eq <- optimize(n_finder, n_range, res=res, U=U, st=st, optimizer="optimize")
+sy <- function(res, U=0.8, st=TRUE, n_range=c(2,12), min_n=-5) {
+  if (n_finder(min_n, res=res, U=U, st=st, optimizer="uniroot") >= 0) n_eq <- list(minimum=min_n, objective=NA) else n_eq <- optimize(n_finder, n_range, res=res, U=U, st=st, optimizer="optimize")
   
   n_eq_est <- n_eq$minimum
   n_eq_obj <- n_eq$objective
@@ -246,14 +212,15 @@ sy <- function(res, U=0.5, st=TRUE, n_range=c(2,12)) {
 msy_est <- function(
   res,
   ST=TRUE,
-  n_range=c(-5,12),
-  U_range=c(0.01,0.99)
+  n_range=c(2,12),
+  U_range=c(0.01,0.99),
+  min_n=-5
 ){
   model <- res$model
   M <- res$M
   p <- res$par
   
-  U_msy <- optimize(sy, U_range, maximum=TRUE, res=res, st=ST, n_range=n_range)
+  U_msy <- optimize(sy, U_range, maximum=TRUE, res=res, st=ST, n_range=n_range, min_n=min_n)
   n_msy <- optimize(n_finder, n_range, res=res, U=U_msy$maximum, st=ST)
   S_msy <- exp(n_msy$minimum)*exp(-M*7*26)*(1-U_msy$maximum)
 
