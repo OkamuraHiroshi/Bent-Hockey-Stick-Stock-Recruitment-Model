@@ -144,17 +144,19 @@ make_par <- function(x,i){
        n0=x$n0[,i]
       )
 }
-sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,a_range=NULL,b_range=NULL,mod="BHS",start=1){
+sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,mod="BHS",start=1){
   Res_sim <- list()
   m <- Sim_dat$m
   last_n <- last(Sim_dat$n)
   last_n <- ifelse(is.na(last_n),-Inf,last_n)
   a_init0 <- a_init
   
-  if (model==2) X = rbind(c(0,5),c(0,6),c(0,7),c(0,8),c(0,9),c(0,10),c(0,20),c(0,4),c(0,3),c(0,2),c(0,1),c(0,0.5),c(0,0.1))
+  if (model==2) X = rbind(c(0,5))
   if (model==1) X = rbind(c(0,0.01),c(0,0.1),c(0,0.5))
   if (model==0) X = rbind(c(0,0.01))
   if (model>=3) X = rbind(c(0,1))
+  
+  if (model<=2) {a_range <- b_range <- c(1,10)} else {a_range <- b_range <- NULL}
   
   nr <- nrow(X)
   
@@ -164,40 +166,53 @@ sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,a_range=NULL,b_range
     print(i)
     for (kk in 1:nr){
     if (mod=="HS"){
-      if (model==0) if (i==7 | i==21 | i==23 | i==31 | i==67 | i==68) a_init=4 else {if (i==15 | i==48 | i==85 | i==95) a_init=2 else {if (i==13 | i==29 | i==57 | i==93 | i==97 | i==98) a_init=6 else {if (i==59) a_init=1 else a_init=a_init0}}}
-      if (model==1) if (i==89) a_init=4 else a_init=a_init0
+      if (model==0) {if (i %in% c(21,57,59,67,68,85,95,97)) a_init=1 else if (i %in% c(7,15,48)) a_init=2 else if (i %in% c(6,16,19,53,58,77,79,84,93)) a_init=3 else if (i %in% c(23)) a_init=4 else if (i %in% c(72,78)) a_init=5 else if (i %in% c(13,29,98)) a_init=6 else if (i %in% c(100)) a_init=7 else if (i %in% c(5,62)) a_init=8 else if (i %in% c(89)) a_init=9 else if (i %in% c(20,74)) a_init=10 else if (i %in% c(82)) a_init=11 else if (i %in% c(63)) a_init=12 else a_init=a_init0}
+      if (model==1) {if (i==89) a_init=4 else a_init=a_init0}
       if (model==2) {
-        if (i==32 | i==45 | i==52 | i==64 | i==88 | i==89) a_init=2 else {if (i==65 | i==86) a_init=4 else a_init=a_init0}
+        if (i==1 | i==24) a_init=6 else {if (i==82) a_init=3 else {if (i==35) a_init=1.5 else {if (i==37 | i==70 | i==75) a_init=2 else {if (i==32 | i==40 | i==62) a_init=2.5 else {if (i==44 | i==65) a_init=4 else a_init=a_init0}}}}}
       }
-      if (model==3) if (i==6 | i==7 | i==23 | i==30 | i==48 | i==62 | i==77) a_init=2 else {if (i==32 | i==76) a_init=4 else {if (i==45 | i==53 | i==54) a_init=6 else {if (i==51) a_init=8 else a_init=a_init0}}}
-      if (model==4) if (i==1 | i==5 | i==6 | i==10 | i==11 | i==14 | i==15 | i==17 | i==30 | i==33 | i==42 | i==77 | i==80 | i==89) a_init=4 else {if (i==25 | i==63 | i==95) a_init=6 else {if (i==38 | i==55 | i==75 | i==92) a_init=8 else a_init=a_init0}}
+      if (model==3) if (i==6 | i==7 | i==23 | i==30 | i==48 | i==62 | i==77) a_init=2 else {if (i==32 | i==76) a_init=4 else {if (i==45 | i==53 | i==54) a_init=6 else {if (i==51) a_init=8 else if (i==31) a_init=12 else a_init=a_init0}}}
+      if (model==4) {if (i %in% c(1,5,10,14,15,17,30,33,38,42,43)) a_init=2 else if (i %in% c(6,11,55,75,77,80)) a_init=3 else if (i %in% c(89)) a_init=4 else if (i %in% c(12)) a_init=5 else if(i %in% c(25,63,95)) a_init=6 else if (i %in% c(92)) a_init=8 else if (i %in% c(65)) a_init=10 else if (i %in% c(22,26)) a_init=13 else a_init=a_init0}
     }
     if (mod=="MR"){ }
     if (mod=="BHS"){
-      if (model==0) if (i %in% c(3,10,13,26,42,53,57,62,77,78,90,92,97,100)) a_init=2 else {if (i %in% c(11,72)) a_init=4 else {if (i %in% c(32,35,51,58,70,76,79,94,95)) a_init=6 else {if (i %in% c(6,16,19,21,39)) a_init=8 else {if (i==15) a_init=1 else a_init=a_init0}}}}
+      if (model==0) if (i %in% c(15,39)) a_init=1 else if (i %in% c(3,10,13,26,42,53,57,62,77,78,90,92,97,100)) a_init=2 else  if (i %in% c(96)) a_init=3 else if (i %in% c(11,72)) a_init=4 else if (i %in% c(27,60)) a_init=5 else if (i %in% c(32,35,51,58,70,76,79,94,95)) a_init=6 else if (i %in% c(9)) a_init=7 else if (i %in% c(6,16,19,21,39,56,59,100)) a_init=8 else if (i %in% c(89,98)) a_init=9 else if (i %in% c(1,31)) a_init=10 else if (i %in% c(61)) a_init=12 else a_init=a_init0
       if (model==1) if (i==41) a_init=1 else {if (i==51 | i==68 | i==84 | i==90) a_init=4 else a_init=a_init0}
-      if (model==2) if (i==16 | i==45 | i==72 | i==76 | i==94) a_init=2 else {if (i==81 | i==92) a_init=4 else a_init=a_init0}
+      if (model==2) if (i==8 | i==44 | i==62 | i==86 | i==94) a_init=2 else if (i==72) a_init=1.8 else if (i==51 | i==96) a_init=2.2 else if (i==14 | i==85) a_init=5 else if (i==45 | i==79 | i==83) a_init=3 else if (i==27 | i==47) a_init=6 else if (i==40) a_init=4.8 else if (i==43) a_init=2.7 else if (i==78) a_init=3.1415*2 else a_init=a_init0
       if (model==3) if (i %in% c(1,52,53,71,72,84,92,98)) a_init=2 else {if (i==50) a_init=4 else {if (i==36) a_init=6 else a_init=a_init0}}
     #  if (model==3) if (i %in% c(12,34,61,89)) a_init=2 else a_init=1.2
-      if (model==4) if (i %in% c(7,31,33,43,44,77)) a_init=4 else {if (i %in% c(11,18,22)) a_init=6 else {if (i %in% c(39,41,58)) a_init=8 else {if (i==1) a_init=10 else a_init=a_init0}}}
+      if (model==4) if (i %in% c(83)) a_init=2 else if (i %in% c(7,31,33,43,44,77)) a_init=4 else if (i %in% c(11,18,22)) a_init=6 else if (i %in% c(39,41,58)) a_init=8 else if (i==14| i==80) a_init=13 else if (i==1) a_init=10 else a_init=a_init0
     }
     if (mod=="BH"){
-      if (model==0) if (i %in% c(4,23,34,41,47,51,67,68,69,79,86)) a_init=2 else {if (i %in% c(43,72)) a_init=4 else {if (i %in% c(15,32)) a_init=6 else {if (i %in% c(28,44,63,76,81,90)) a_init=8 else {if (i==100) a_init=1 else a_init=a_init0}}}}
-      if (model==1) if (i %in% c(2,36,76)) a_init=4 else {if (i==90) a_init=2 else a_init=a_init0}
-      if (model==2) if (i %in% c(14,33,40,43,52,54,58)) a_init=2 else {if (i %in% c(27)) a_init=1 else {if (i %in% c(29,98,99)) a_init=4 else {if (i %in% c(44)) a_init=6 else a_init=a_init0}}}
-      if (model==4) if (i %in% c(3,4,7,9,22,43,57,65,75,86)) a_init=4 else {if (i==60) a_init=6 else a_init=a_init0}
+      if (model==0) if (i %in% c(4,23,34,41,47,51,67,68,69,70,79,86)) a_init=2 else if(i==29) a_init=3 else if (i %in% c(24,43,72)) a_init=4 else if (i %in% c(15,32)) a_init=6 else if (i %in% c(25,74,83)) a_init=7 else if (i %in% c(28,44,63,76,81,90)) a_init=8 else if (i %in% c(9,19,50,90)) a_init=9 else if (i %in% c(60,82)) a_init=10 else if (i==58) a_init=11 else if (i==100) a_init=1 else a_init=a_init0
+      if (model==1) if (i %in% c(2,36,76)) a_init=4 else if (i==61) a_init=3 else if (i==90) a_init=2 else a_init=a_init0
+      if (model==2) if (i %in% c(1,5,12,47,58,70)) a_init=5 else if (i %in% c(74)) a_init=1 else if (i %in% c(44)) a_init=3 else if (i %in% c(6,17,63,69)) a_init=4 else if (i %in% c(14, 24, 25)) a_init=2.2 else if (i %in% c(20)) a_init=2 else if (i %in% c(54)) a_init=3.14 else a_init=a_init0
+      if (model==3) if (i %in% c(14,55,56,64,95,100)) a_init=2 else a_init=a_init0
+      if (model==4) if (i %in% c(8,34,35)) a_init=2 else if (i %in% c(3,4,7,9,22,43,57,65,75,86)) a_init=4 else if (i==60) a_init=6 else a_init=a_init0
     }
     if (mod=="RI"){
-      if (model==0) if (i %in% c(22,55,83,84)) a_init=4 else {if (i %in% c(17,25,41,48)) a_init=6 else {if (i %in% c(33,66,80,85)) a_init=8 else {if (i %in% c(75)) a_init=10 else {if (i %in% c(52,76,77,82)) a_init=12 else {if (i %in% c(26)) a_init=14 else a_init=a_init0}}}}}
-      if (model==1) if (i %in% c(41,47,73,76,85)) a_init=8 else {a_init=a_init0}
-      if (model==2) if (i==25) a_init=4 else {if (i==77) a_init=2 else a_init=a_init0}
+      if (model==0) if (i==41) a_init=1 else if (i==82) a_init=2 else if (i %in% c(22,55,83,84)) a_init=4 else if (i %in% c(17,25,41,48)) a_init=6 else if (i==76) a_init=7 else if (i %in% c(33,66,80,85)) a_init=8 else if (i==26) a_init=9 else if (i %in% c(75)) a_init=10 else if (i %in% c(52,76,77,82)) a_init=12 else if (i %in% c(26)) a_init=14 else a_init=a_init0
+      if (model==1) if (i %in% c(41,47,73,76,85)) a_init=8 else if (i==66) a_init=9 else a_init=a_init0
+      if (model==2) if (i %in% c(13,73)) a_init=2 else {if (i %in% c(51)) a_init=4.5 else {if (i %in% c(77)) a_init=2.1 else {if (i %in% c(82)) a_init=4 else {a_init=a_init0}}}}
       if (model==3) if (i %in% c(9,55,75)) a_init=2 else a_init=a_init0
-      if (model==4) if (i %in% c(100)) a_init=8 else {a_init=a_init0}
+      if (model==4) if (i %in% c(50,51,55,67,85,87)) a_init=2 else if (i==15) a_init=13 else if (i %in% c(100)) a_init=8 else a_init=a_init0
     }
     if (exp(last_n[i]) > 0){
       dat_sim <- make_dat(Sim_dat,i)
+ #     print(dat_sim)
       par_sim <- make_par(Sim_dat,i)
-      if (kk==1 | (kk > 1 & temp_res$conv_diag[5]!=TRUE)) temp_res <- leslie(dat_sim, par_sim, model=model, do_compile=FALSE, pre_process=FALSE, x_int=X[kk,], g0=X[kk,2],a_range=a_range,b_range=b_range,a_init=a_init,b_init=b_init)
+      if (model==2){
+        km_select <- RF(dat_sim, par_sim, a_init=a_init)
+        km_best <- km_select$best_km
+        if(length(km_best)==0) {
+          a_init <- 2.2
+          km_select <- RF(dat_sim, par_sim, a_init=a_init)
+          km_best <- km_select$best_km
+        }
+        if(length(km_best)==0) km_best <- 0.5        
+        X[kk,2] <- km_best
+      } else km_select <- NULL
+      if (kk==1 | (kk > 1 & temp_res$conv_diag[5]!=TRUE)) temp_res <- leslie(dat_sim, par_sim, model=model, do_compile=FALSE, pre_process=FALSE, x_int=X[kk,], g0=X[kk,2],a_init=a_init,b_init=b_init,a_range=a_range, b_range=b_range)
     } else {
       temp1 <- matrix(0, nrow=4, ncol=2)
       rownames(temp1) <- c("b","n0_new","log_r","q")
@@ -207,7 +222,7 @@ sim2est <- function(Sim_dat,model=1,a_init=NULL,b_init=NULL,a_range=NULL,b_range
       temp_res <- list(sdrep=temp1, conv_diag=conv_diag)
     }
     }
-    Res_sim[[i]] <- temp_res
+    Res_sim[[i]] <- list(res=temp_res, km_select=km_select)
   }
   return(Res_sim)
 }
