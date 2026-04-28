@@ -42,7 +42,7 @@ leslie <- function(
   #
 
   if (pre_process){
-    dat <- dat %>% mutate(Cat=Catch/Mass, CR=CPUE/Mass)
+    if (length(dat$Cat)==0) dat <- dat %>% mutate(Cat=Catch/Mass, CR=CPUE/Mass)
     TC <- dat %>% group_by(Year) %>% summarize(TC=sum(Cat))
     Years <- unique(dat$Year)
     leslie_res <- lapply(Years, function(i) lm(CR~cumsum(Cat),data=subset(dat, Year==i)))
@@ -80,13 +80,15 @@ leslie <- function(
   
   if (!is.null(a_init)) par_bhs$log_a <- a_init
   if (!is.null(b_init)) par_bhs$log_b <- b_init
-
+   
   if (par_bhs$log_b < min(par_bhs$n0)) par_bhs$log_b <- 1.1*min(par_bhs$n0)
   if (par_bhs$log_b > max_P*max(par_bhs$n0)) par_bhs$log_b <- max_P*(max(par_bhs$n0)+0.1*par_bhs$log_b)
  
   lo <- c(a_range[1],b_range[1],rep(-20,5))
   up <- c(a_range[2],b_range[2],rep(20,5))
-  
+ 
+  ab_inits <- c(par_bhs$log_a, par_bhs$log_b)
+ 
   maps <- list()
   if (phase_a) maps$log_a <- factor(NA)
   if (phase_b) maps$log_b <- factor(NA)
@@ -167,10 +169,46 @@ leslie <- function(
     p1 <- ggplot(ts_out, aes(x=S,y=R))+geom_point()+labs(x="S", y="R")+theme_bw()+geom_line(data=pred_out, aes(x=ES,y=ER),color="blue")
   } else p1 <- NULL
   
-  list(model=model, model_name=model_name[model+1], M=M, x_int=x_int, n_g=n_g, GL=GL, no_est=no_est, g=g0, phase_b=phase_b, conv_diag=conv_diag, p=p1, obj=obj, mod=mod_bhs, pars=pars, dat=dat_bhs, sdrep=sdrep, ts_out=ts_out)
+  list(model=model, model_name=model_name[model+1], M=M, ab_inits=ab_inits, x_int=x_int, n_g=n_g, GL=GL, no_est=no_est, g=g0, phase_b=phase_b, conv_diag=conv_diag, p=p1, obj=obj, mod=mod_bhs, pars=pars, dat=dat_bhs, sdrep=sdrep, ts_out=ts_out)
 }
 
 ## Prediction
+
+pred_R <- function(S,p,GL,g=0.01,model=0) {
+   a <- p$a
+   b <- p$b
+   
+   if (model==0) res <- ifelse(S < b, a*S, a*b) 
+   if (model==1) res <- a*(S+sqrt(b^2+g^2/4)-sqrt((S-b)^2+g^2/4))
+   if (model==2){
+     pred <- function(S) sum(GL$xr_x*GL$wt*a*b*(S/b)^(1-(S/b)^(1/GL$xp_x)))/(2*GL$xr_x)
+     pred <- Vectorize(pred, "S")
+     res <- ifelse(S < b, pred(S), a*b)
+   }
+   if (model==3) res <- a*S/(1+S/b)
+   if (model==4) res <- a*S*exp(-S/b)
+   
+   return(res)
+}
+
+SR_plot <- function(res, msy_res=NULL, log_p=FALSE){
+ ts_out <- res$ts_out
+ model <- res$model
+ pars <- res$par
+ GL <- res$GL
+ g <- res$g
+ 
+ X <- seq(0,round(max(ts_out$S)*1.1))
+ pred_out <- data.frame(ES = X, ER = pred_R(X, pars, GL, g=g, model=model))
+
+ p1 <- ggplot(ts_out, aes(x=S,y=R))+geom_point()+labs(x="S", y="R")+theme_bw()+geom_line(data=pred_out, aes(x=ES,y=ER),color="blue")
+ 
+ if (log_p) p1 <- p1 + scale_y_log10()
+ 
+ p1
+}
+
+## MSY estimation
 
 n_est <- function(n, p, M, GL, g, U=0.8, n_g=50, stochastic=TRUE, model=2){
    require(statmod)
@@ -291,4 +329,52 @@ msy_sim_est <- function(
 
 comp_table <- function(Res0, Res1){
   table(sapply(1:100, function(i) Res0[[i]]$conv_diag[4]), sapply(1:100, function(i) Res1[[i]]$conv_diag[4]))
+}
+
+## Retrospective Forecasting
+
+tf_parms <- function(parms, n){
+  parms$log_q <- parms$log_q[1:n]
+  parms$n0 <-  parms$n0[1:n]
+  
+  return(parms)
+}
+
+RF <- function(
+  dat,
+  parms=NULL,
+  a_init=NULL,
+  n = 4,
+  km_range = c(1,3,5,7,10,15,20)
+){
+  Res2 <- list()
+  for (i in 1:length(km_range)){
+    Res2[[i]] <- leslie(dat, parms=parms, model=2, do_compile=FALSE, pre_process=FALSE, x_int=c(0,km_range[i]),a_init=a_init)
+  }
+  
+  Conv <- sapply(1:length(km_range), function(i) Res2[[i]]$conv_diag[5])
+  maxY <- max(dat$Year)
+  nY <- maxY - min(dat$Year)+1
+  Error <- NULL
+  
+  for (k in 1:length(km_range)){
+    res21 <- Res2[[k]]
+    if (Conv[k]){
+      error <- NULL
+      for (i in 1:n){
+        res20 <- leslie(subset(dat, Year <= maxY-i), parms=tf_parms(parms, nY-i), model=2, do_compile=FALSE, pre_process=FALSE, x_int=c(0,km_range[k]), a_init=a_init)
+        error <- c(error, log((log(pred_R(res20$ts_out[nY-i,1],res20$par,res20$GL,model=2))-log(res21$ts_out[nY-(i-1),2]))^2))
+      }
+    } else {error <- rep(NA,n)}
+    Error <- cbind(Error, error)
+  }
+  colnames(Error) <- km_range
+  Ret_F <- exp(colMeans(Error))
+
+  dat_RF <- data.frame(km=km_range, RF=Ret_F, Convergence=Conv)
+  dat_C <- dat_RF[dat_RF$Convergence,]
+  
+  best_km <- dat_C[which.min(dat_C$RF),"km"]
+  
+  list(dat_RF=dat_RF, best_km=best_km)
 }
